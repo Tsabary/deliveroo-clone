@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView } from "react-native";
 import { ArrowRightIcon } from "react-native-heroicons/outline";
+import sanityClient from "../sanity";
 import RestaurantCard from "./RestaurantCard";
 
 function FeaturedRow({
@@ -12,6 +13,27 @@ function FeaturedRow({
   title: string;
   description: string;
 }) {
+  const [restaurants, setRestaurants] = useState([]);
+
+  useEffect(() => {
+    sanityClient
+      .fetch(
+        `*[_type == "featured" && _id == $id] {
+          ...,
+          restaurants[]->{
+            ...,
+            dishes[]->,
+            type-> {
+              name
+            }
+          },
+        }[0]
+        `,
+        { id }
+      )
+      .then((data) => setRestaurants(data?.restaurants));
+  }, [id]);
+
   return (
     <View>
       <View className="mt-4 flex-row items-center justify-between px-4">
@@ -26,18 +48,21 @@ function FeaturedRow({
         className="pt-4"
       >
         {/* Restaurant Cards.. */}
-        <RestaurantCard
-          id="123"
-          title="Yo! Sushi."
-          imgUrl="https://shorturl.at/nNQS7"
-          rating={4.5}
-          genre="Japanese"
-          address="123 Main Street"
-          short_description="Short test description"
-          dishes={[]}
-          long={20}
-          lat={0}
-        />
+        {restaurants?.map((restaurant) => (
+          <RestaurantCard
+            key={restaurant._id}
+            id={restaurant._id}
+            title={restaurant.name}
+            imgUrl={restaurant.image}
+            rating={restaurant.rating}
+            genre={restaurant.type?.name}
+            address={restaurant.address}
+            short_description={restaurant.short_description}
+            dishes={restaurant.dishes}
+            long={restaurant.long}
+            lat={restaurant.lat}
+          />
+        ))}
       </ScrollView>
     </View>
   );
